@@ -43,13 +43,7 @@ def is_pet_related(message):
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a strict classifier that only replies with 'yes' or 'no'. "
-                        "Reply 'yes' if the message is related to pets that are legal and commonly kept in India, "
-                        "including but not limited to: dogs, cats, rabbits, guinea pigs, hamsters, parrots (like budgies and lovebirds), "
-                        "canaries, finches, fish (like goldfish, bettas, guppies), turtles (except endangered species), and aquarium pets. "
-                        "Do not include wild animals or protected species like parakeets, Indian mynas, star tortoises, etc. "
-                        "If the message is not about legal pet care, feeding, health, or behavior, respond 'no'. "
-                        "Respond only with 'yes' or 'no' and nothing else."
+                    "content": "You are a classifier. Reply with 'yes' if the user's message is about pet care, health, feeding, grooming, behavior, training, vaccination, or general information related to keeping pets. This includes all types of legal, domesticated, or companion animals commonly kept in homes — such as mammals, birds, fish, or reptiles — but not wild animals or protected species. If the message is not about pet-related topics, respond with 'no'. Reply strictly with 'yes' or 'no' — nothing else."
                 },
                 {
                     "role": "user",
