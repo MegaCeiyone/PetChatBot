@@ -2,6 +2,8 @@ import streamlit as st
 from openai import OpenAI
 import pyodbc
 import datetime
+import psycopg2
+from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
 import os
 
@@ -9,22 +11,26 @@ import os
 load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
 
-# SQL Server connection parameters
-db_server = os.getenv("DB_SERVER")
-db_name = os.getenv("DB_NAME")
-db_user = os.getenv("DB_USER")
-db_password = os.getenv("DB_PASSWORD")
+# Supabase PostgreSQL connection parameters
+def get_db_connection():
+    return psycopg2.connect(
+        host=os.getenv("SUPABASE_DB_HOST"),
+        port=os.getenv("SUPABASE_DB_PORT"),
+        dbname=os.getenv("SUPABASE_DB_NAME"),
+        user=os.getenv("SUPABASE_DB_USER"),
+        password=os.getenv("SUPABASE_DB_PASSWORD")
+    )
 
 # SQL Server connection string
-conn_str = (
-    f"Driver={{ODBC Driver 17 for SQL Server}};"
-    f"Server={db_server};"
-    f"Database={db_name};"
-    f"Uid={db_user};"
-    f"Pwd={db_password};"
-    f"Encrypt=no;"
-    f"TrustServerCertificate=no;"
-)
+#conn_str = (
+#    f"Driver={{ODBC Driver 17 for SQL Server}};"
+#    f"Server={db_server};"
+#    f"Database={db_name};"
+#    f"Uid={db_user};"
+#    f"Pwd={db_password};"
+#    f"Encrypt=no;"
+#    f"TrustServerCertificate=no;"
+#)
 
 # Initialize OpenAI client
 client = OpenAI(api_key=api_key)
@@ -37,7 +43,13 @@ def is_pet_related(message):
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a classifier that answers only with 'yes' or 'no'. Respond only with 'yes' if the message is related to pets (animals like dogs, cats, birds, etc). Otherwise respond 'no'."
+                    "content": "You are a strict classifier that only replies with 'yes' or 'no'. "
+                        "Reply 'yes' if the message is related to pets that are legal and commonly kept in India, "
+                        "including but not limited to: dogs, cats, rabbits, guinea pigs, hamsters, parrots (like budgies and lovebirds), "
+                        "canaries, finches, fish (like goldfish, bettas, guppies), turtles (except endangered species), and aquarium pets. "
+                        "Do not include wild animals or protected species like parakeets, Indian mynas, star tortoises, etc. "
+                        "If the message is not about legal pet care, feeding, health, or behavior, respond 'no'. "
+                        "Respond only with 'yes' or 'no' and nothing else."
                 },
                 {
                     "role": "user",
@@ -55,12 +67,12 @@ def is_pet_related(message):
 # Save chat to database
 def save_to_db(user_message, bot_response):
     try:
-        conn = pyodbc.connect(conn_str)
+        conn = get_db_connection()
         cursor = conn.cursor()
 
         cursor.execute("""
             INSERT INTO ChatHistory (UserInput, AssistantResponse)
-            VALUES (?, ?)
+            VALUES (%s, %s)
         """, (user_message, bot_response))
 
         conn.commit()
@@ -72,9 +84,14 @@ def save_to_db(user_message, bot_response):
 # Retrieve chat history
 def get_chat_history():
     try:
-        conn = pyodbc.connect(conn_str)
+        conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT UserInput, AssistantResponse, Timestamp FROM ChatHistory ORDER BY Timestamp DESC")
+        cursor.execute("""
+            SELECT userinput, assistantresponse, timestamp
+            FROM chathistory
+            ORDER BY timestamp DESC
+            LIMIT 20
+        """)
         rows = cursor.fetchall()
         conn.close()
         return rows
